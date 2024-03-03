@@ -1,0 +1,43 @@
+name: Continuous Tunnel
+
+on:
+  push:
+    branches:
+      
+main
+schedule:
+cron: '0 /1 * *'  # Run every hour
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      
+name: Download
+      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+
+      
+name: Extract
+      run: Expand-Archive ngrok.zip
+
+      
+name: Auth
+      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+
+      
+name: Enable TS
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+name: Create Tunnel
+    run: |
+      while ($true) {
+        try {
+          Start-Process -FilePath ".\ngrok\ngrok.exe" -ArgumentList "tcp 3389" -NoNewWindow -Wait} catch {
+          Write-Host "Error occurred: $_"
+          Start-Sleep -Seconds 60  # Wait for 60 seconds before retrying}}
